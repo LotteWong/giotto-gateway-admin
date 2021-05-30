@@ -1080,6 +1080,10 @@ var doc = `{
                     "description": "租户名称",
                     "type": "string"
                 },
+                "black_ips": {
+                    "description": "ip黑名单，支持前缀匹配",
+                    "type": "string"
+                },
                 "qpd": {
                     "description": "每日请求量限制",
                     "type": "integer"
@@ -1101,18 +1105,24 @@ var doc = `{
         "dto.CreateOrUpdateGrpcServiceReq": {
             "type": "object",
             "required": [
-                "ip_list",
                 "port",
-                "service_name",
-                "weight_list"
+                "service_name"
             ],
             "properties": {
+                "black_host_name": {
+                    "description": "黑名单主机列表",
+                    "type": "string"
+                },
                 "black_list": {
                     "description": "黑名单ip列表",
                     "type": "string"
                 },
+                "client_ip_flow_interval": {
+                    "description": "客户端ip限流间隔",
+                    "type": "integer"
+                },
                 "client_ip_flow_limit": {
-                    "description": "客户端ip限流",
+                    "description": "客户端ip限流数量",
                     "type": "integer"
                 },
                 "forbid_list": {
@@ -1124,7 +1134,7 @@ var doc = `{
                     "type": "string"
                 },
                 "ip_list": {
-                    "description": "ip列表",
+                    "description": "启用ip列表",
                     "type": "string"
                 },
                 "open_auth": {
@@ -1143,8 +1153,12 @@ var doc = `{
                     "description": "服务描述",
                     "type": "string"
                 },
+                "service_host_flow_interval": {
+                    "description": "客户端ip限流间隔",
+                    "type": "integer"
+                },
                 "service_host_flow_limit": {
-                    "description": "服务端主机限流",
+                    "description": "服务端主机限流数量",
                     "type": "integer"
                 },
                 "service_name": {
@@ -1168,26 +1182,32 @@ var doc = `{
         "dto.CreateOrUpdateHttpServiceReq": {
             "type": "object",
             "required": [
-                "ip_list",
                 "rule",
-                "service_name",
-                "weight_list"
+                "service_name"
             ],
             "properties": {
                 "black_list": {
                     "description": "黑名单ip列表",
                     "type": "string"
                 },
-                "client_ip_flow_limit": {
-                    "description": "客户端ip限流",
+                "client_ip_flow_interval": {
+                    "description": "客户端ip限流间隔",
                     "type": "integer"
+                },
+                "client_ip_flow_limit": {
+                    "description": "客户端ip限流数量",
+                    "type": "integer"
+                },
+                "forbid_list": {
+                    "description": "禁用ip列表",
+                    "type": "string"
                 },
                 "header_transform": {
                     "description": "header转换",
                     "type": "string"
                 },
                 "ip_list": {
-                    "description": "ip列表",
+                    "description": "启用ip列表",
                     "type": "string"
                 },
                 "need_https": {
@@ -1222,8 +1242,12 @@ var doc = `{
                     "description": "服务描述",
                     "type": "string"
                 },
+                "service_host_flow_interval": {
+                    "description": "客户端ip限流间隔",
+                    "type": "integer"
+                },
                 "service_host_flow_limit": {
-                    "description": "服务端主机限流",
+                    "description": "服务端主机限流数量",
                     "type": "integer"
                 },
                 "service_name": {
@@ -1263,18 +1287,24 @@ var doc = `{
         "dto.CreateOrUpdateTcpServiceReq": {
             "type": "object",
             "required": [
-                "ip_list",
                 "port",
-                "service_name",
-                "weight_list"
+                "service_name"
             ],
             "properties": {
+                "black_host_name": {
+                    "description": "黑名单主机列表",
+                    "type": "string"
+                },
                 "black_list": {
                     "description": "黑名单ip列表",
                     "type": "string"
                 },
+                "client_ip_flow_interval": {
+                    "description": "客户端ip限流间隔",
+                    "type": "integer"
+                },
                 "client_ip_flow_limit": {
-                    "description": "客户端ip限流",
+                    "description": "客户端ip限流数量",
                     "type": "integer"
                 },
                 "forbid_list": {
@@ -1282,7 +1312,7 @@ var doc = `{
                     "type": "string"
                 },
                 "ip_list": {
-                    "description": "ip列表",
+                    "description": "启用ip列表",
                     "type": "string"
                 },
                 "open_auth": {
@@ -1301,8 +1331,12 @@ var doc = `{
                     "description": "服务描述",
                     "type": "string"
                 },
+                "service_host_flow_interval": {
+                    "description": "客户端ip限流间隔",
+                    "type": "integer"
+                },
                 "service_host_flow_limit": {
-                    "description": "服务端主机限流",
+                    "description": "服务端主机限流数量",
                     "type": "integer"
                 },
                 "service_name": {
@@ -1346,6 +1380,9 @@ var doc = `{
             "type": "object",
             "properties": {
                 "app_id": {
+                    "type": "string"
+                },
+                "black_ips": {
                     "type": "string"
                 },
                 "id": {
@@ -1552,17 +1589,25 @@ var doc = `{
         "po.AccessControl": {
             "type": "object",
             "properties": {
+                "black_host_name": {
+                    "type": "string"
+                },
                 "black_list": {
                     "type": "string"
                 },
+                "client_ip_flow_interval": {
+                    "type": "integer"
+                },
                 "client_ip_flow_limit": {
-                    "description": "BlackHostName     string ` + "`" + `json:\"black_host_name\" gorm:\"column:black_host_name\" description:\"黑名单主机\"` + "`" + `",
                     "type": "integer"
                 },
                 "id": {
                     "type": "integer"
                 },
                 "open_auth": {
+                    "type": "integer"
+                },
+                "service_host_flow_interval": {
                     "type": "integer"
                 },
                 "service_host_flow_limit": {
@@ -1586,6 +1631,9 @@ var doc = `{
                     "type": "string"
                 },
                 "app_name": {
+                    "type": "string"
+                },
+                "black_ips": {
                     "type": "string"
                 },
                 "create_at": {
