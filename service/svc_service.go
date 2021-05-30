@@ -60,41 +60,6 @@ func GetSvcService() *SvcService {
 	return svcService
 }
 
-func (s *SvcService) HttpProxyAccessService(ctx *gin.Context) (*po.ServiceDetail, error) {
-	path := ctx.Request.URL.Path
-	var host string
-	colonIndex := strings.Index(ctx.Request.Host, ":")
-	if colonIndex == -1 {
-		// host doesn't contain port
-		host = ctx.Request.Host
-	} else {
-		// host does contain port
-		host = ctx.Request.Host[0:colonIndex]
-	}
-	// httpServices, _, _, err := s.GroupServicesInMemory()
-	httpServices, _, _, err := s.GroupServicesFromRedis()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, service := range httpServices {
-		switch service.HttpRule.RuleType {
-		case constants.HttpRuleTypePrefixUrl:
-			if strings.HasPrefix(path, service.HttpRule.Rule) {
-				return service, nil
-			}
-		case constants.HttpRuleTypeDomain:
-			if host == service.HttpRule.Rule {
-				return service, nil
-			}
-		default:
-			return nil, errors.New(fmt.Sprintf("no such http rule type: %d", service.HttpRule.RuleType))
-		}
-	}
-
-	return nil, errors.New(fmt.Sprintf("no matched service for path %s and host %s", path, host))
-}
-
 func (s *SvcService) LoadServicesFromRedis() error {
 	s.DCLock.Do(func() {
 		ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
@@ -350,6 +315,7 @@ func (s *SvcService) CreateHttpService(ctx *gin.Context, tx *gorm.DB, req *dto.C
 		RoundType:              req.RoundType,
 		IpList:                 req.IpList,
 		WeightList:             req.WeightList,
+		ForbidList:             req.ForbidList,
 		UpstreamConnectTimeout: req.UpstreamConnectTimeout,
 		UpstreamHeaderTimeout:  req.UpstreamHeaderTimeout,
 		UpstreamIdleTimeout:    req.UpstreamIdleTimeout,
@@ -362,12 +328,14 @@ func (s *SvcService) CreateHttpService(ctx *gin.Context, tx *gorm.DB, req *dto.C
 
 	// save into access control table
 	accessControl := &po.AccessControl{
-		ServiceId:            serviceInfo.Id,
-		OpenAuth:             req.OpenAuth,
-		BlackList:            req.BlackList,
-		WhiteList:            req.WhiteList,
-		ClientIpFlowLimit:    req.ClientIpFlowLimit,
-		ServiceHostFlowLimit: req.ServiceHostFlowLimit,
+		ServiceId:               serviceInfo.Id,
+		OpenAuth:                req.OpenAuth,
+		BlackList:               req.BlackList,
+		WhiteList:               req.WhiteList,
+		ClientIpFlowLimit:       req.ClientIpFlowLimit,
+		ClientIpFlowInterval:    req.ClientIpFlowInterval,
+		ServiceHostFlowLimit:    req.ServiceHostFlowLimit,
+		ServiceHostFlowInterval: req.ServiceHostFlowInterval,
 	}
 	if err := s.accessControlOperator.Save(ctx, tx, accessControl); err != nil {
 		tx.Rollback()
@@ -428,6 +396,7 @@ func (s *SvcService) UpdateHttpService(ctx *gin.Context, tx *gorm.DB, req *dto.C
 	loadBalance.RoundType = req.RoundType
 	loadBalance.IpList = req.IpList
 	loadBalance.WeightList = req.WeightList
+	loadBalance.ForbidList = req.ForbidList
 	loadBalance.UpstreamConnectTimeout = req.UpstreamConnectTimeout
 	loadBalance.UpstreamHeaderTimeout = req.UpstreamHeaderTimeout
 	loadBalance.UpstreamIdleTimeout = req.UpstreamIdleTimeout
@@ -443,7 +412,9 @@ func (s *SvcService) UpdateHttpService(ctx *gin.Context, tx *gorm.DB, req *dto.C
 	accessControl.BlackList = req.BlackList
 	accessControl.WhiteList = req.WhiteList
 	accessControl.ClientIpFlowLimit = req.ClientIpFlowLimit
+	accessControl.ClientIpFlowInterval = req.ClientIpFlowInterval
 	accessControl.ServiceHostFlowLimit = req.ServiceHostFlowLimit
+	accessControl.ServiceHostFlowInterval = req.ServiceHostFlowInterval
 	if err := s.accessControlOperator.Save(ctx, tx, accessControl); err != nil {
 		tx.Rollback()
 		return nil, err
@@ -508,13 +479,16 @@ func (s *SvcService) CreateTcpService(ctx *gin.Context, tx *gorm.DB, req *dto.Cr
 
 	// save into access control table
 	accessControl := &po.AccessControl{
-		ServiceId:            serviceInfo.Id,
-		OpenAuth:             req.OpenAuth,
-		BlackList:            req.BlackList,
-		WhiteList:            req.WhiteList,
-		WhiteHostName:        req.WhiteHostName,
-		ClientIpFlowLimit:    req.ClientIpFlowLimit,
-		ServiceHostFlowLimit: req.ServiceHostFlowLimit,
+		ServiceId:               serviceInfo.Id,
+		OpenAuth:                req.OpenAuth,
+		BlackList:               req.BlackList,
+		WhiteList:               req.WhiteList,
+		WhiteHostName:           req.WhiteHostName,
+		BlackHostName:           req.BlackHostName,
+		ClientIpFlowLimit:       req.ClientIpFlowLimit,
+		ClientIpFlowInterval:    req.ClientIpFlowInterval,
+		ServiceHostFlowLimit:    req.ServiceHostFlowLimit,
+		ServiceHostFlowInterval: req.ServiceHostFlowInterval,
 	}
 	if err := s.accessControlOperator.Save(ctx, tx, accessControl); err != nil {
 		tx.Rollback()
@@ -575,8 +549,11 @@ func (s *SvcService) UpdateTcpService(ctx *gin.Context, tx *gorm.DB, req *dto.Cr
 	accessControl.BlackList = req.BlackList
 	accessControl.WhiteList = req.WhiteList
 	accessControl.WhiteHostName = req.WhiteHostName
+	accessControl.BlackHostName = req.BlackHostName
 	accessControl.ClientIpFlowLimit = req.ClientIpFlowLimit
+	accessControl.ClientIpFlowInterval = req.ClientIpFlowInterval
 	accessControl.ServiceHostFlowLimit = req.ServiceHostFlowLimit
+	accessControl.ServiceHostFlowInterval = req.ServiceHostFlowInterval
 	if err := s.accessControlOperator.Save(ctx, tx, accessControl); err != nil {
 		tx.Rollback()
 		return nil, err
@@ -642,13 +619,16 @@ func (s *SvcService) CreateGrpcService(ctx *gin.Context, tx *gorm.DB, req *dto.C
 
 	// save into access control table
 	accessControl := &po.AccessControl{
-		ServiceId:            serviceInfo.Id,
-		OpenAuth:             req.OpenAuth,
-		BlackList:            req.BlackList,
-		WhiteList:            req.WhiteList,
-		WhiteHostName:        req.WhiteHostName,
-		ClientIpFlowLimit:    req.ClientIpFlowLimit,
-		ServiceHostFlowLimit: req.ServiceHostFlowLimit,
+		ServiceId:               serviceInfo.Id,
+		OpenAuth:                req.OpenAuth,
+		BlackList:               req.BlackList,
+		WhiteList:               req.WhiteList,
+		WhiteHostName:           req.WhiteHostName,
+		BlackHostName:           req.BlackHostName,
+		ClientIpFlowLimit:       req.ClientIpFlowLimit,
+		ClientIpFlowInterval:    req.ClientIpFlowInterval,
+		ServiceHostFlowLimit:    req.ServiceHostFlowLimit,
+		ServiceHostFlowInterval: req.ServiceHostFlowInterval,
 	}
 	if err := s.accessControlOperator.Save(ctx, tx, accessControl); err != nil {
 		tx.Rollback()
@@ -717,8 +697,11 @@ func (s *SvcService) UpdateGrpcService(ctx *gin.Context, tx *gorm.DB, req *dto.C
 	accessControl.BlackList = req.BlackList
 	accessControl.WhiteList = req.WhiteList
 	accessControl.WhiteHostName = req.WhiteHostName
+	accessControl.BlackHostName = req.BlackHostName
 	accessControl.ClientIpFlowLimit = req.ClientIpFlowLimit
+	accessControl.ClientIpFlowInterval = req.ClientIpFlowInterval
 	accessControl.ServiceHostFlowLimit = req.ServiceHostFlowLimit
+	accessControl.ServiceHostFlowInterval = req.ServiceHostFlowInterval
 	if err := s.accessControlOperator.Save(ctx, tx, accessControl); err != nil {
 		tx.Rollback()
 		return nil, err
@@ -819,10 +802,12 @@ func (s *SvcService) validCreateHttpService(ctx *gin.Context, tx *gorm.DB, req *
 	}
 
 	// check whether ip list is corresponded to weight list
-	ipListLen := len(strings.Split(req.IpList, ","))
-	weightListLen := len(strings.Split(req.WeightList, ","))
-	if ipListLen != weightListLen {
-		return errors.New("ip list's length is not corresponded to weight list's length")
+	if req.IpList != "" {
+		ipListLen := len(strings.Split(req.IpList, ","))
+		weightListLen := len(strings.Split(req.WeightList, ","))
+		if ipListLen != weightListLen {
+			return errors.New("ip list's length is not corresponded to weight list's length")
+		}
 	}
 
 	return nil
@@ -839,10 +824,12 @@ func (s *SvcService) validUpdateHttpService(ctx *gin.Context, tx *gorm.DB, req *
 	}
 
 	// check whether ip list is corresponded to weight list
-	ipListLen := len(strings.Split(req.IpList, ","))
-	weightListLen := len(strings.Split(req.WeightList, ","))
-	if ipListLen != weightListLen {
-		return errors.New("ip list's length is not corresponded to weight list's length")
+	if req.IpList != "" {
+		ipListLen := len(strings.Split(req.IpList, ","))
+		weightListLen := len(strings.Split(req.WeightList, ","))
+		if ipListLen != weightListLen {
+			return errors.New("ip list's length is not corresponded to weight list's length")
+		}
 	}
 
 	return nil
@@ -863,10 +850,12 @@ func (s *SvcService) validCreateTcpService(ctx *gin.Context, tx *gorm.DB, req *d
 	}
 
 	// check whether ip list is corresponded to weight list
-	ipListLen := len(strings.Split(req.IpList, ","))
-	weightListLen := len(strings.Split(req.WeightList, ","))
-	if ipListLen != weightListLen {
-		return errors.New("ip list's length is not corresponded to weight list's length")
+	if req.IpList != "" {
+		ipListLen := len(strings.Split(req.IpList, ","))
+		weightListLen := len(strings.Split(req.WeightList, ","))
+		if ipListLen != weightListLen {
+			return errors.New("ip list's length is not corresponded to weight list's length")
+		}
 	}
 
 	return nil
@@ -883,10 +872,12 @@ func (s *SvcService) validUpdateTcpService(ctx *gin.Context, tx *gorm.DB, req *d
 	}
 
 	// check whether ip list is corresponded to weight list
-	ipListLen := len(strings.Split(req.IpList, ","))
-	weightListLen := len(strings.Split(req.WeightList, ","))
-	if ipListLen != weightListLen {
-		return errors.New("ip list's length is not corresponded to weight list's length")
+	if req.IpList != "" {
+		ipListLen := len(strings.Split(req.IpList, ","))
+		weightListLen := len(strings.Split(req.WeightList, ","))
+		if ipListLen != weightListLen {
+			return errors.New("ip list's length is not corresponded to weight list's length")
+		}
 	}
 
 	return nil
@@ -907,10 +898,12 @@ func (s *SvcService) validCreateGrpcService(ctx *gin.Context, tx *gorm.DB, req *
 	}
 
 	// check whether ip list is corresponded to weight list
-	ipListLen := len(strings.Split(req.IpList, ","))
-	weightListLen := len(strings.Split(req.WeightList, ","))
-	if ipListLen != weightListLen {
-		return errors.New("ip list's length is not corresponded to weight list's length")
+	if req.IpList != "" {
+		ipListLen := len(strings.Split(req.IpList, ","))
+		weightListLen := len(strings.Split(req.WeightList, ","))
+		if ipListLen != weightListLen {
+			return errors.New("ip list's length is not corresponded to weight list's length")
+		}
 	}
 
 	return nil
@@ -928,10 +921,12 @@ func (s *SvcService) validUpdateGrpcService(ctx *gin.Context, tx *gorm.DB, req *
 	}
 
 	// check whether ip list is corresponded to weight list
-	ipListLen := len(strings.Split(req.IpList, ","))
-	weightListLen := len(strings.Split(req.WeightList, ","))
-	if ipListLen != weightListLen {
-		return errors.New("ip list's length is not corresponded to weight list's length")
+	if req.IpList != "" {
+		ipListLen := len(strings.Split(req.IpList, ","))
+		weightListLen := len(strings.Split(req.WeightList, ","))
+		if ipListLen != weightListLen {
+			return errors.New("ip list's length is not corresponded to weight list's length")
+		}
 	}
 
 	return nil
