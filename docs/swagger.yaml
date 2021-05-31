@@ -402,6 +402,8 @@ definitions:
         type: integer
       id:
         type: integer
+      is_delete:
+        type: integer
       open_auth:
         type: integer
       service_host_flow_interval:
@@ -446,6 +448,8 @@ definitions:
         type: string
       id:
         type: integer
+      is_delete:
+        type: integer
       port:
         type: integer
       service_id:
@@ -456,6 +460,8 @@ definitions:
       header_transform:
         type: string
       id:
+        type: integer
+      is_delete:
         type: integer
       need_https:
         type: integer
@@ -486,6 +492,8 @@ definitions:
         type: integer
       ip_list:
         type: string
+      is_delete:
+        type: integer
       round_type:
         type: integer
       service_id:
@@ -536,6 +544,8 @@ definitions:
   po.TcpRule:
     properties:
       id:
+        type: integer
+      is_delete:
         type: integer
       port:
         type: integer
@@ -771,6 +781,25 @@ paths:
                   $ref: '#/definitions/dto.ServicePercentageItems'
               type: object
       summary: 查询服务类型占比接口
+      tags:
+      - 数据接口
+  /dashboard/percentage/services/http:
+    get:
+      description: 查询HTTP服务类型占比
+      operationId: /percentage/services/http
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: success
+          schema:
+            allOf:
+            - $ref: '#/definitions/common_middleware.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.ServicePercentageItems'
+              type: object
+      summary: 查询HTTP服务类型占比接口
       tags:
       - 数据接口
   /dashboard/statistics:

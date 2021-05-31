@@ -14,12 +14,14 @@ import (
 var dashboardService *DashboardService
 
 type DashboardService struct {
-	serviceOperator *mysql.ServiceOperator
+	serviceOperator      *mysql.ServiceOperator
+	protocolRuleOperator *mysql.ProtocolRuleOperator
 }
 
 func NewDashboardService() *DashboardService {
 	service := &DashboardService{
-		serviceOperator: mysql.NewServiceOperator(),
+		serviceOperator:      mysql.NewServiceOperator(),
+		protocolRuleOperator: mysql.NewProtocolRuleOperator(),
 	}
 	return service
 }
@@ -50,6 +52,35 @@ func (s *DashboardService) GetServicePercentage(ctx *gin.Context, tx *gorm.DB) (
 			ServiceLegend: legend,
 			ServiceType:   group.ServiceType,
 			ServiceCount:  group.ServiceCount,
+		}
+		records = append(records, *record)
+	}
+
+	return &dto.ServicePercentageItems{
+		Legends: legends,
+		Records: records,
+	}, nil
+}
+
+func (s *DashboardService) GetHttpServicePercentage(ctx *gin.Context, tx *gorm.DB) (*dto.ServicePercentageItems, error) {
+	groups, err := s.protocolRuleOperator.GroupByHttpServiceType(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+
+	var legends []string
+	var records []dto.ServicePercentageItem
+	for _, group := range groups {
+		legend, ok := constants.HttpServiceTypeMap[group.HttpServiceType]
+		if !ok {
+			return nil, errors.New(fmt.Sprintf("http service type %d not found", group.HttpServiceType))
+		}
+		legends = append(legends, legend)
+
+		record := &dto.ServicePercentageItem{
+			ServiceLegend: legend,
+			ServiceType:   group.HttpServiceType,
+			ServiceCount:  group.HttpServiceCount,
 		}
 		records = append(records, *record)
 	}

@@ -21,6 +21,7 @@ func RegistDashboardRoutes(grp *gin.RouterGroup) {
 	grp.GET("/flow/apps/:app_id", controller.GetAppFlow)
 	grp.GET("/statistics", controller.GetStatistics)
 	grp.GET("/percentage/services", controller.GetServicePercentage)
+	grp.GET("/percentage/services/http", controller.GetHttpServicePercentage)
 }
 
 // GetStatistics godoc
@@ -81,6 +82,30 @@ func (c *DashboardController) GetServicePercentage(ctx *gin.Context) {
 	}
 
 	res, err := service.GetDashboardService().GetServicePercentage(ctx, tx)
+	if err != nil {
+		common_middleware.ResponseError(ctx, 5001, err)
+		return
+	}
+
+	common_middleware.ResponseSuccess(ctx, res)
+}
+
+// GetHttpServicePercentage godoc
+// @Summary 查询HTTP服务类型占比接口
+// @Description 查询HTTP服务类型占比
+// @Tags 数据接口
+// @Id /percentage/services/http
+// @Produce  json
+// @Success 200 {object} common_middleware.Response{data=dto.ServicePercentageItems} "success"
+// @Router /dashboard/percentage/services/http [get]
+func (c *DashboardController) GetHttpServicePercentage(ctx *gin.Context) {
+	tx, err := lib.GetGormPool("default")
+	if err != nil {
+		common_middleware.ResponseError(ctx, 5000, err)
+		return
+	}
+
+	res, err := service.GetDashboardService().GetHttpServicePercentage(ctx, tx)
 	if err != nil {
 		common_middleware.ResponseError(ctx, 5001, err)
 		return

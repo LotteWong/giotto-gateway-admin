@@ -406,6 +406,39 @@ var doc = `{
                 }
             }
         },
+        "/dashboard/percentage/services/http": {
+            "get": {
+                "description": "查询HTTP服务类型占比",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "数据接口"
+                ],
+                "summary": "查询HTTP服务类型占比接口",
+                "operationId": "/percentage/services/http",
+                "responses": {
+                    "200": {
+                        "description": "success",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/common_middleware.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.ServicePercentageItems"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/dashboard/statistics": {
             "get": {
                 "description": "查询统计指标",
@@ -1604,6 +1637,9 @@ var doc = `{
                 "id": {
                     "type": "integer"
                 },
+                "is_delete": {
+                    "type": "integer"
+                },
                 "open_auth": {
                     "type": "integer"
                 },
@@ -1671,6 +1707,9 @@ var doc = `{
                 "id": {
                     "type": "integer"
                 },
+                "is_delete": {
+                    "type": "integer"
+                },
                 "port": {
                     "type": "integer"
                 },
@@ -1686,6 +1725,9 @@ var doc = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "integer"
+                },
+                "is_delete": {
                     "type": "integer"
                 },
                 "need_https": {
@@ -1731,6 +1773,9 @@ var doc = `{
                 },
                 "ip_list": {
                     "type": "string"
+                },
+                "is_delete": {
+                    "type": "integer"
                 },
                 "round_type": {
                     "type": "integer"
@@ -1808,6 +1853,9 @@ var doc = `{
             "type": "object",
             "properties": {
                 "id": {
+                    "type": "integer"
+                },
+                "is_delete": {
                     "type": "integer"
                 },
                 "port": {
