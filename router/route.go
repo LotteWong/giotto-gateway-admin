@@ -69,8 +69,8 @@ func InitRouter(middlewares ...gin.HandlerFunc) *gin.Engine {
 		})
 	})
 
-	// TODO: use config from file system
-	store, err := sessions.NewRedisStore(10, "tcp", "127.0.0.1:6379", "", []byte("secret"))
+	redisAddr := lib.GetStringSliceConf("redis_map.list.default.proxy_list")[0]
+	store, err := sessions.NewRedisStore(10, "tcp", redisAddr, "", []byte("secret"))
 	if err != nil {
 		log.Fatalf("sessions.NewRedisStore err: %v", err)
 	}

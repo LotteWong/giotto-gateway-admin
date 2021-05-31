@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"github.com/LotteWong/giotto-gateway-admin/constants"
 	"github.com/LotteWong/giotto-gateway-admin/models/po"
 	"github.com/LotteWong/giotto-gateway-admin/utils"
 	"github.com/e421083458/gorm"
@@ -46,6 +47,49 @@ func (o *ProtocolRuleOperator) ListHttpRulesByServiceId(ctx *gin.Context, tx *go
 	}
 
 	return httpRules, count, nil
+}
+
+func (o *ProtocolRuleOperator) GroupByHttpServiceType(ctx *gin.Context, tx *gorm.DB) ([]po.HttpServicePercentage, error) {
+	var groups []po.HttpServicePercentage
+
+	query := tx.SetCtx(utils.GetGinTraceContext(ctx)).Table((&po.HttpRule{}).TableName()).Where("is_delete=0")
+
+	// wss protocol
+	wssPercent := &po.HttpServicePercentage{
+		HttpServiceType:  constants.HttpServiceTypeWss,
+		HttpServiceCount: o.countHttpServiceType(query, constants.Enable, constants.Enable),
+	}
+	groups = append(groups, *wssPercent)
+
+	// ws protocol
+	wsPercent := &po.HttpServicePercentage{
+		HttpServiceType:  constants.HttpServiceTypeWs,
+		HttpServiceCount: o.countHttpServiceType(query, constants.Enable, constants.Disable),
+	}
+	groups = append(groups, *wsPercent)
+
+	// https protocol
+	httpsPercent := &po.HttpServicePercentage{
+		HttpServiceType:  constants.HttpServiceTypeHttps,
+		HttpServiceCount: o.countHttpServiceType(query, constants.Disable, constants.Enable),
+	}
+	groups = append(groups, *httpsPercent)
+
+	// http protocol
+	httpPercent := &po.HttpServicePercentage{
+		HttpServiceType:  constants.HttpServiceTypeHttp,
+		HttpServiceCount: o.countHttpServiceType(query, constants.Disable, constants.Disable),
+	}
+	groups = append(groups, *httpPercent)
+
+	return groups, nil
+}
+
+func (o *ProtocolRuleOperator) countHttpServiceType(query *gorm.DB, needWebSocket, needHttps int) int64 {
+	var httpServiceTypeCount int64
+	httpServiceTypeQuery := query.Where("(need_websocket = ? and need_https = ?)", needWebSocket, needHttps)
+	httpServiceTypeQuery.Limit(-1).Offset(-1).Count(&httpServiceTypeCount)
+	return httpServiceTypeCount
 }
 
 func (o *ProtocolRuleOperator) FindTcpRule(ctx *gin.Context, tx *gorm.DB, req *po.TcpRule) (*po.TcpRule, error) {
